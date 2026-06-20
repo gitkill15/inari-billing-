@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INARI Salon Management</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="brand">
+        <span class="brand-mark">INARI</span>
+        <span class="brand-sub">Salon Management</span>
+    </div>
+    <div class="header-right">
+        <div class="datetime-box">
+            <span id="liveDay" class="live-day"></span>
+            <span id="liveTime" class="live-time"></span>
+        </div>
+        <button id="adminOpenBtn" class="btn-ghost" type="button">Admin</button>
+    </div>
+</header>
+
+<main>
+
+    <section class="dashboard">
+        <div class="card">
+            <h3>Today's Revenue</h3>
+            <p id="totalRevenue">₹0</p>
+        </div>
+        <div class="card">
+            <h3>Today's Customers</h3>
+            <p id="totalCustomers">0</p>
+        </div>
+        <div class="card">
+            <h3>New Today</h3>
+            <p id="totalNew">0</p>
+        </div>
+        <div class="card">
+            <h3>Returning Today</h3>
+            <p id="totalReturning">0</p>
+        </div>
+    </section>
+
+    <section class="section-panel form-panel">
+        <h2>Add Customer</h2>
+        <form id="customerForm">
+
+            <div class="field-group">
+                <label class="field-label">Customer Type</label>
+                <div class="toggle-group" id="customerTypeToggle">
+                    <label class="toggle-option">
+                        <input type="radio" name="customerType" value="New" checked>
+                        <span>🆕 New</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="radio" name="customerType" value="Returning">
+                        <span>🔄 Returning</span>
+                    </label>
+                </div>
+            </div>
+
+            <input type="text" id="customerName" placeholder="Customer Name" autocomplete="off" required>
+            <input type="tel" id="customerPhone" placeholder="Phone Number" autocomplete="off" required>
+
+            <div class="multi-select" id="serviceSelect">
+                <button type="button" class="multi-select-trigger" id="serviceTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="serviceTriggerText">Select Services</span>
+                    <span class="chevron">▾</span>
+                </button>
+                <div class="multi-select-panel" id="servicePanel" hidden></div>
+            </div>
+
+            <select id="reference">
+                <option value="" selected>Select Reference</option>
+            </select>
+
+            <select id="paymentType" required></select>
+
+            <select id="staff" required>
+                <option value="" disabled selected>Select Staff</option>
+            </select>
+
+            <input type="number" id="amount" placeholder="Amount" min="0" required>
+            <button type="submit" class="btn-primary">Save Customer</button>
+        </form>
+    </section>
+
+    <section class="actions">
+        <button class="btn-secondary" onclick="exportExcel()" type="button">Export Today Excel</button>
+        <button class="btn-secondary" onclick="exportPDF()" type="button">Export Today PDF</button>
+    </section>
+
+    <section class="table-container">
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th><th>Type</th><th>Name</th><th>Phone</th><th>Service(s)</th><th>Ref</th>
+                        <th>Payment</th><th>Staff</th><th>Amount</th><th>Date</th><th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTable"></tbody>
+            </table>
+        </div>
+        <p class="empty-state" id="emptyState" hidden>No customers logged for today yet.</p>
+    </section>
+
+</main>
+
+<!-- Admin Modal -->
+<div class="overlay" id="adminOverlay" hidden>
+    <div class="modal modal-wide">
+        <button class="icon-btn modal-close" id="closeAdminBtn" type="button">×</button>
+
+        <div id="adminLogin">
+            <h2>Admin Access</h2>
+            <p class="muted">Enter the admin password to view past days, export data, and manage settings.</p>
+            <input type="password" id="adminPasswordInput" placeholder="Password">
+            <button class="btn-primary" id="adminLoginBtn" type="button">Unlock</button>
+            <p class="error-text" id="adminError" hidden>Incorrect password.</p>
+        </div>
+
+        <div id="adminPanel" hidden>
+            <div class="admin-tabs">
+                <button class="admin-tab-btn is-active" id="tabHistoryBtn" type="button">History</button>
+                <button class="admin-tab-btn" id="tabExportBtn" type="button">Export</button>
+                <button class="admin-tab-btn" id="tabSettingsBtn" type="button">Settings</button>
+            </div>
+
+            <!-- ── History Tab ── -->
+            <div id="adminTabHistory">
+                <div class="calendar-header">
+                    <button class="icon-btn" id="prevMonth" type="button">‹</button>
+                    <h2 id="calendarLabel">June 2026</h2>
+                    <button class="icon-btn" id="nextMonth" type="button">›</button>
+                </div>
+                <div class="calendar-weekdays">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+                    <span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+
+                <div class="history-summary">
+                    <h3 id="historyDateLabel">Today</h3>
+                    <div class="history-stats">
+                        <div><span class="stat-label">Revenue</span><span class="stat-value" id="historyRevenue">₹0</span></div>
+                        <div><span class="stat-label">Customers</span><span class="stat-value" id="historyCustomers">0</span></div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-secondary" id="historyExportExcelBtn" type="button">Export Excel</button>
+                        <button class="btn-secondary" id="historyExportPdfBtn" type="button">Export PDF</button>
+                    </div>
+                </div>
+
+                <div class="table-container history-table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th><th>Type</th><th>Name</th><th>Phone</th><th>Service(s)</th><th>Ref</th>
+                                    <th>Payment</th><th>Staff</th><th>Amount</th><th>Date</th><th>Time</th><th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable"></tbody>
+                        </table>
+                    </div>
+                    <p class="empty-state" id="historyEmptyState" hidden>No customers logged for this day.</p>
+                </div>
+            </div>
+
+            <!-- ── Export Tab ── -->
+            <div id="adminTabExport" hidden>
+
+                <!-- Export Customers sub-section -->
+                <div class="export-sub-section">
+                    <h3 class="export-sub-title">Export Customers</h3>
+                    <p class="muted">Filter by date range, customer type, or name / phone then export.</p>
+
+                    <div class="export-controls">
+                        <div class="export-row">
+                            <div class="field-group">
+                                <label class="field-label">Customer Type</label>
+                                <div class="toggle-group">
+                                    <label class="toggle-option">
+                                        <input type="radio" name="exportType" value="All" checked>
+                                        <span>All</span>
+                                    </label>
+                                    <label class="toggle-option">
+                                        <input type="radio" name="exportType" value="New">
+                                        <span>New</span>
+                                    </label>
+                                    <label class="toggle-option">
+                                        <input type="radio" name="exportType" value="Returning">
+                                        <span>Returning</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="field-group">
+                                <label class="field-label">From Date</label>
+                                <input type="date" id="exportFromDate">
+                            </div>
+                            <div class="field-group">
+                                <label class="field-label">To Date</label>
+                                <input type="date" id="exportToDate">
+                            </div>
+                        </div>
+                        <div class="export-row">
+                            <div class="field-group export-search-group">
+                                <label class="field-label">Search Name / Phone</label>
+                                <input type="text" id="exportSearch" placeholder="Filter by name or phone…">
+                            </div>
+                            <div class="export-actions">
+                                <button class="btn-secondary" id="exportPreviewBtn" type="button">Preview</button>
+                                <button class="btn-primary" id="exportRangeExcelBtn" type="button">Export Excel</button>
+                                <button class="btn-secondary" id="exportRangePdfBtn" type="button">Export PDF</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="exportPreviewSection" hidden>
+                        <p class="export-count" id="exportCount"></p>
+                        <div class="table-scroll export-preview-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th><th>Type</th><th>Name</th><th>Phone</th><th>Service(s)</th><th>Ref</th>
+                                        <th>Payment</th><th>Staff</th><th>Amount</th><th>Date</th><th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="exportPreviewTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Sales sub-section -->
+                <div class="export-sub-section export-monthly-section">
+                    <h3 class="export-sub-title">Monthly Sales Report</h3>
+                    <p class="muted">Export a full month's data as an Excel workbook — one sheet per day with a summary sheet.</p>
+
+                    <div class="export-row monthly-row">
+                        <div class="field-group">
+                            <label class="field-label">Select Month</label>
+                            <input type="month" id="monthlyMonthPicker">
+                        </div>
+                        <div class="export-actions">
+                            <button class="btn-primary" id="exportMonthlyExcelBtn" type="button">Export Monthly Excel</button>
+                        </div>
+                    </div>
+                    <p class="success-text" id="monthlyExportMsg" hidden>Preparing export…</p>
+                </div>
+
+            </div>
+
+            <!-- ── Settings Tab ── -->
+            <div id="adminTabSettings" hidden>
+                <p class="muted">These lists feed the dropdowns on the Add Customer form.</p>
+                <div class="admin-grid">
+                    <div class="option-editor" data-key="services">
+                        <h4>Services</h4>
+                        <ul class="option-list"></ul>
+                        <div class="option-add">
+                            <input type="text" placeholder="Add service">
+                            <button class="btn-secondary" type="button">Add</button>
+                        </div>
+                    </div>
+                    <div class="option-editor" data-key="references">
+                        <h4>References</h4>
+                        <ul class="option-list"></ul>
+                        <div class="option-add">
+                            <input type="text" placeholder="Add reference">
+                            <button class="btn-secondary" type="button">Add</button>
+                        </div>
+                    </div>
+                    <div class="option-editor" data-key="payments">
+                        <h4>Payment Types</h4>
+                        <ul class="option-list"></ul>
+                        <div class="option-add">
+                            <input type="text" placeholder="Add payment type">
+                            <button class="btn-secondary" type="button">Add</button>
+                        </div>
+                    </div>
+                    <div class="option-editor" data-key="staff">
+                        <h4>Staff</h4>
+                        <ul class="option-list"></ul>
+                        <div class="option-add">
+                            <input type="text" placeholder="Add staff member">
+                            <button class="btn-secondary" type="button">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-password-change">
+                    <h4>Change Admin Password</h4>
+                    <input type="password" id="newAdminPassword" placeholder="New password">
+                    <button class="btn-secondary" id="updatePasswordBtn" type="button">Update Password</button>
+                    <p class="success-text" id="passwordUpdated" hidden>Password updated.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Customer Modal -->
+<div class="overlay" id="editOverlay" hidden>
+    <div class="modal modal-sm">
+        <button class="icon-btn modal-close" id="closeEditBtn" type="button">×</button>
+        <h2>Edit Customer</h2>
+        <form id="editForm">
+            <div class="field-group">
+                <label class="field-label">Customer Type</label>
+                <div class="toggle-group">
+                    <label class="toggle-option">
+                        <input type="radio" name="editCustomerType" value="New">
+                        <span>🆕 New</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="radio" name="editCustomerType" value="Returning">
+                        <span>🔄 Returning</span>
+                    </label>
+                </div>
+            </div>
+            <input type="hidden" id="editCustomerId">
+            <input type="text" id="editName" placeholder="Customer Name" required>
+            <input type="tel" id="editPhone" placeholder="Phone Number" required>
+            <input type="text" id="editService" placeholder="Service(s)">
+            <input type="text" id="editReference" placeholder="Reference">
+            <input type="text" id="editPayment" placeholder="Payment">
+            <input type="text" id="editStaff" placeholder="Staff">
+            <input type="number" id="editAmount" placeholder="Amount" min="0">
+            <div class="edit-actions">
+                <button type="submit" class="btn-primary">Save Changes</button>
+                <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
