@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INARI BEAUTY SALON</title>
+<title>INARI Salon Management</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -58,7 +58,7 @@
                     </label>
                     <label class="toggle-option">
                         <input type="radio" name="customerType" value="Returning">
-                        <span>🔄 Old</span>
+                        <span>🔄 Returning</span>
                     </label>
                 </div>
             </div>
@@ -66,6 +66,7 @@
             <input type="text" id="customerName" placeholder="Customer Name" autocomplete="off" required>
             <input type="tel" id="customerPhone" placeholder="Phone Number" autocomplete="off" required>
 
+            <!-- Service multi-select -->
             <div class="multi-select" id="serviceSelect">
                 <button type="button" class="multi-select-trigger" id="serviceTrigger" aria-haspopup="listbox" aria-expanded="false">
                     <span id="serviceTriggerText">Select Services</span>
@@ -80,9 +81,14 @@
 
             <select id="paymentType" required></select>
 
-            <select id="staff" required>
-                <option value="" disabled selected>Select Staff</option>
-            </select>
+            <!-- Staff multi-select (replaces old <select id="staff">) -->
+            <div class="multi-select" id="staffSelect">
+                <button type="button" class="multi-select-trigger" id="staffTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="staffTriggerText">Select Staff</span>
+                    <span class="chevron">▾</span>
+                </button>
+                <div class="multi-select-panel" id="staffPanel" hidden></div>
+            </div>
 
             <input type="number" id="amount" placeholder="Amount" min="0" required>
             <button type="submit" class="btn-primary">Save Customer</button>
@@ -175,7 +181,6 @@
             <!-- ── Export Tab ── -->
             <div id="adminTabExport" hidden>
 
-                <!-- Export Customers sub-section -->
                 <div class="export-sub-section">
                     <h3 class="export-sub-title">Export Customers</h3>
                     <p class="muted">Filter by date range, customer type, or name / phone then export.</p>
@@ -237,7 +242,6 @@
                     </div>
                 </div>
 
-                <!-- Monthly Sales sub-section -->
                 <div class="export-sub-section export-monthly-section">
                     <h3 class="export-sub-title">Monthly Sales Report</h3>
                     <p class="muted">Export a full month's data as an Excel workbook — one sheet per day with a summary sheet.</p>
