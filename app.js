@@ -34,6 +34,7 @@ let customers        = [];   // today's cache (real-time)
 let allCustomers     = [];   // all customers (loaded on demand)
 let config           = {};
 let selectedServices = [];
+let selectedStaff    = [];   // multi-select staff
 
 let historyDate          = todayKey();
 let historyCalendarMonth = new Date();
@@ -145,11 +146,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Service multi-select
     document.getElementById("serviceTrigger").addEventListener("click", e => {
         e.stopPropagation();
-        toggleServicePanel();
+        toggleMultiSelect("service");
     });
+
+    // Staff multi-select
+    document.getElementById("staffTrigger").addEventListener("click", e => {
+        e.stopPropagation();
+        toggleMultiSelect("staff");
+    });
+
+    // Close any open multi-select when clicking outside
     document.addEventListener("click", e => {
-        const wrapper = document.getElementById("serviceSelect");
-        if (wrapper && !wrapper.contains(e.target)) toggleServicePanel(false);
+        const serviceWrapper = document.getElementById("serviceSelect");
+        if (serviceWrapper && !serviceWrapper.contains(e.target)) {
+            closeMultiSelect("service");
+        }
+        const staffWrapper = document.getElementById("staffSelect");
+        if (staffWrapper && !staffWrapper.contains(e.target)) {
+            closeMultiSelect("staff");
+        }
     });
 
     // Admin modal
@@ -242,18 +257,18 @@ function startClock() {
 }
 
 /* ---------------------------------------------------------
-   Dropdowns — reference now includes staff names
+   Dropdowns
    --------------------------------------------------------- */
 
 function populateDropdowns() {
     renderServiceOptions();
+    renderStaffOptions();
 
     // Reference = config.references + staff names (prefixed)
     const staffRefs = config.staff.map(s => `Staff: ${s}`);
     const allRefs   = [...config.references, ...staffRefs];
-    fillSelect("reference",   allRefs,         "Select Reference", false);
-    fillSelect("paymentType", config.payments,  null,              false);
-    fillSelect("staff",       config.staff,     "Select Staff",    true);
+    fillSelect("reference", allRefs, "Select Reference", false);
+    fillSelect("paymentType", config.payments, null, false);
 }
 
 function fillSelect(id, options, placeholder, placeholderDisabled) {
@@ -277,12 +292,44 @@ function fillSelect(id, options, placeholder, placeholderDisabled) {
 }
 
 /* ---------------------------------------------------------
+   Generic Multi-Select helpers
+   --------------------------------------------------------- */
+
+function toggleMultiSelect(type) {
+    const panelId   = type === "service" ? "servicePanel"   : "staffPanel";
+    const triggerId = type === "service" ? "serviceTrigger" : "staffTrigger";
+    const panel   = document.getElementById(panelId);
+    const trigger = document.getElementById(triggerId);
+    const isOpen  = !panel.hidden;
+    if (isOpen) {
+        closeMultiSelect(type);
+    } else {
+        panel.hidden = false;
+        trigger.setAttribute("aria-expanded", "true");
+        trigger.classList.add("is-open");
+    }
+}
+
+function closeMultiSelect(type) {
+    const panelId   = type === "service" ? "servicePanel"   : "staffPanel";
+    const triggerId = type === "service" ? "serviceTrigger" : "staffTrigger";
+    const panel   = document.getElementById(panelId);
+    const trigger = document.getElementById(triggerId);
+    panel.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.classList.remove("is-open");
+}
+
+/* ---------------------------------------------------------
    Multi-select: Services
    --------------------------------------------------------- */
 
 function renderServiceOptions() {
+    // Remove stale selections
     selectedServices = selectedServices.filter(s => config.services.includes(s));
     const panel = document.getElementById("servicePanel");
+
+    // Build options without wiping existing checked state
     panel.innerHTML = config.services.map(value => {
         const id      = "svc_" + value.replace(/[^a-z0-9]/gi, "_");
         const checked = selectedServices.includes(value) ? "checked" : "";
@@ -292,34 +339,70 @@ function renderServiceOptions() {
                 <span>${escapeHtml(value)}</span>
             </label>`;
     }).join("");
+
     panel.querySelectorAll("input[type=checkbox]").forEach(cb => {
         cb.addEventListener("change", () => {
-            if (cb.checked) { if (!selectedServices.includes(cb.value)) selectedServices.push(cb.value); }
-            else            { selectedServices = selectedServices.filter(s => s !== cb.value); }
-            updateServiceTriggerText();
+            if (cb.checked) {
+                if (!selectedServices.includes(cb.value)) selectedServices.push(cb.value);
+            } else {
+                selectedServices = selectedServices.filter(s => s !== cb.value);
+            }
+            updateTriggerText("service");
         });
     });
-    updateServiceTriggerText();
+
+    updateTriggerText("service");
 }
 
-function updateServiceTriggerText() {
-    const label = document.getElementById("serviceTriggerText");
-    if (selectedServices.length === 0) {
-        label.textContent = "Select Services"; label.classList.add("is-placeholder");
-    } else if (selectedServices.length <= 2) {
-        label.textContent = selectedServices.join(", "); label.classList.remove("is-placeholder");
+/* ---------------------------------------------------------
+   Multi-select: Staff
+   --------------------------------------------------------- */
+
+function renderStaffOptions() {
+    selectedStaff = selectedStaff.filter(s => config.staff.includes(s));
+    const panel = document.getElementById("staffPanel");
+
+    panel.innerHTML = config.staff.map(value => {
+        const id      = "stf_" + value.replace(/[^a-z0-9]/gi, "_");
+        const checked = selectedStaff.includes(value) ? "checked" : "";
+        return `
+            <label class="ms-option" for="${id}">
+                <input type="checkbox" id="${id}" value="${escapeHtml(value)}" ${checked}>
+                <span>${escapeHtml(value)}</span>
+            </label>`;
+    }).join("");
+
+    panel.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        cb.addEventListener("change", () => {
+            if (cb.checked) {
+                if (!selectedStaff.includes(cb.value)) selectedStaff.push(cb.value);
+            } else {
+                selectedStaff = selectedStaff.filter(s => s !== cb.value);
+            }
+            updateTriggerText("staff");
+        });
+    });
+
+    updateTriggerText("staff");
+}
+
+function updateTriggerText(type) {
+    const isService = type === "service";
+    const selected  = isService ? selectedServices : selectedStaff;
+    const labelId   = isService ? "serviceTriggerText" : "staffTriggerText";
+    const label     = document.getElementById(labelId);
+    const noun      = isService ? "service" : "staff";
+
+    if (selected.length === 0) {
+        label.textContent = isService ? "Select Services" : "Select Staff";
+        label.classList.add("is-placeholder");
+    } else if (selected.length <= 2) {
+        label.textContent = selected.join(", ");
+        label.classList.remove("is-placeholder");
     } else {
-        label.textContent = `${selectedServices.length} services selected`; label.classList.remove("is-placeholder");
+        label.textContent = `${selected.length} ${noun} selected`;
+        label.classList.remove("is-placeholder");
     }
-}
-
-function toggleServicePanel(forceOpen) {
-    const panel   = document.getElementById("servicePanel");
-    const trigger = document.getElementById("serviceTrigger");
-    const open    = forceOpen !== undefined ? forceOpen : panel.hidden;
-    panel.hidden  = !open;
-    trigger.setAttribute("aria-expanded", String(open));
-    trigger.classList.toggle("is-open", open);
 }
 
 /* ---------------------------------------------------------
@@ -333,7 +416,17 @@ function getSelectedCustomerType() {
 
 async function addCustomer(e) {
     e.preventDefault();
-    if (selectedServices.length === 0) { toggleServicePanel(true); document.getElementById("serviceTrigger").focus(); return; }
+
+    if (selectedServices.length === 0) {
+        toggleMultiSelect("service");
+        document.getElementById("serviceTrigger").focus();
+        return;
+    }
+    if (selectedStaff.length === 0) {
+        toggleMultiSelect("staff");
+        document.getElementById("staffTrigger").focus();
+        return;
+    }
 
     const submitBtn = document.querySelector("#customerForm button[type=submit]");
     submitBtn.disabled = true; submitBtn.textContent = "Saving…";
@@ -346,7 +439,7 @@ async function addCustomer(e) {
         service:   selectedServices.join(", "),
         reference: document.getElementById("reference").value,
         payment:   document.getElementById("paymentType").value,
-        staff:     document.getElementById("staff").value,
+        staff:     selectedStaff.join(", "),
         amount:    Number(document.getElementById("amount").value),
         dateKey:   todayKey(),
         date:      now.toLocaleString(),
@@ -367,12 +460,20 @@ function resetForm() {
     document.getElementById("customerName").value  = "";
     document.getElementById("customerPhone").value = "";
     document.getElementById("amount").value        = "";
+
+    // Reset services
     selectedServices = [];
     renderServiceOptions();
-    toggleServicePanel(false);
+    closeMultiSelect("service");
+
+    // Reset staff
+    selectedStaff = [];
+    renderStaffOptions();
+    closeMultiSelect("staff");
+
     document.getElementById("reference").selectedIndex   = 0;
     document.getElementById("paymentType").selectedIndex = 0;
-    document.getElementById("staff").selectedIndex       = 0;
+
     const typeNew = document.querySelector('input[name="customerType"][value="New"]');
     if (typeNew) typeNew.checked = true;
     document.getElementById("customerName").focus();
@@ -872,7 +973,6 @@ async function exportMonthlyExcel() {
                 "Time":       c.time        || ""
             }));
             const ws = XLSX.utils.json_to_sheet(dayRows);
-            // Column widths
             ws["!cols"] = [
                 {wch:4},{wch:10},{wch:18},{wch:14},{wch:22},
                 {wch:14},{wch:10},{wch:12},{wch:12},{wch:12}
@@ -893,13 +993,12 @@ async function exportMonthlyExcel() {
 
     const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
     summaryWs["!cols"] = [{wch:16},{wch:12},{wch:8},{wch:12},{wch:14}];
-    // Insert summary as first sheet
     wb.SheetNames.unshift("Summary");
     wb.Sheets["Summary"] = summaryWs;
 
-    const monthLabel = new Date(year, month-1, 1).toLocaleDateString("en-IN", { month:"long", year:"numeric" });
     XLSX.writeFile(wb, `INARI_Monthly_${picker}.xlsx`);
 
+    const monthLabel = new Date(year, month-1, 1).toLocaleDateString("en-IN", { month:"long", year:"numeric" });
     msg.textContent = `✓ Exported ${monthLabel} — ${grandCount} customers, ${formatRupees(grandTotal)}`;
     btn.disabled = false; btn.textContent = "Export Monthly Excel";
     setTimeout(() => { msg.hidden = true; }, 4000);
