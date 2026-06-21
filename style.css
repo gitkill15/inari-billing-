@@ -231,6 +231,12 @@ input:focus, select:focus{ border-color:var(--color-accent); background:#fff; }
 
 input[type="date"]{ cursor:pointer; }
 
+input[readonly]{
+  background:var(--color-surface-alt);
+  color:var(--color-text-muted);
+  cursor:not-allowed;
+}
+
 select{
   cursor:pointer; appearance:none;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238B8175' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
@@ -276,6 +282,8 @@ form#customerForm button[type="submit"]{ grid-column:1 / -1; justify-self:end; m
 .toggle-option input[type="radio"]:checked + span{
   background:var(--color-accent); color:#fff;
 }
+
+.toggle-group.is-locked{ opacity:0.6; pointer-events:none; }
 
 /* ---------- Customer Type Badges ---------- */
 .badge-new{
@@ -334,6 +342,50 @@ form#customerForm button[type="submit"]{ grid-column:1 / -1; justify-self:end; m
 .ms-option input[type="checkbox"]{
   width:16px; height:16px;
   accent-color:var(--color-accent); cursor:pointer;
+}
+
+/* ---------- Per-staff amount boxes ---------- */
+.staff-amount-box{
+  grid-column:1 / -1;
+  display:flex; flex-direction:column; gap:10px;
+  background:var(--color-surface-alt);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-md);
+  padding:16px 18px;
+}
+
+.staff-amount-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+}
+
+.staff-amount-item{
+  display:flex; flex-direction:column; gap:6px;
+}
+
+.staff-amount-item label{
+  font-size:12.5px; font-weight:600; color:var(--color-text);
+}
+
+.staff-amount-item input{
+  padding:11px 12px; font-size:14.5px; background:#fff;
+}
+
+.staff-amount-total{
+  font-size:13px; font-weight:600; color:var(--color-text-muted);
+  align-self:flex-end;
+}
+.staff-amount-total strong{ color:var(--color-text); font-variant-numeric:tabular-nums; }
+
+/* ---------- Membership note ---------- */
+.membership-note{
+  grid-column:1 / -1;
+  background:var(--color-accent-soft);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-md);
+  padding:13px 16px;
+  font-size:14px; color:var(--color-text);
 }
 
 /* ---------- Actions ---------- */
