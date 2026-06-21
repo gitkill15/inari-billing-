@@ -58,7 +58,7 @@
                     </label>
                     <label class="toggle-option">
                         <input type="radio" name="customerType" value="Returning">
-                        <span>🔄 Returning</span>
+                        <span>🔄 Old</span>
                     </label>
                 </div>
             </div>
@@ -89,6 +89,18 @@
                 </button>
                 <div class="multi-select-panel" id="staffPanel" hidden></div>
             </div>
+
+            <!-- Per-staff amount boxes: one input per selected staff member -->
+            <div class="staff-amount-box" id="staffAmountBox" hidden>
+                <label class="field-label">Amount per Staff</label>
+                <div class="staff-amount-grid" id="staffAmountGrid"></div>
+            </div>
+
+            <!-- Membership notice shown instead of amount input -->
+            <p class="membership-note" id="membershipNote" hidden>
+                💳 Membership Card selected — final amount is <strong>₹0</strong>. You can still log each staff
+                member's service amount below for reporting. Customer will be saved as <strong>Returning</strong>.
+            </p>
 
             <input type="number" id="amount" placeholder="Amount" min="0" required>
             <button type="submit" class="btn-primary">Save Customer</button>
