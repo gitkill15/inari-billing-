@@ -26,7 +26,7 @@ const db = getFirestore(app);
 const DEFAULT_CONFIG = {
     services:   ["Haircut", "Hair Color", "Facial", "Manicure", "Pedicure", "Hair Spa", "Beard Trim", "Bridal Makeup"],
     references: ["Walk-in", "Instagram", "Facebook", "Google", "Referral", "Other"],
-    payments:   ["Cash", "UPI", "Card"],
+    payments:   ["Cash", "UPI", "Card", "Membership Card"],
     staff:      ["Raju", "Anita", "Priya"]
 };
 
@@ -35,6 +35,7 @@ let allCustomers     = [];   // all customers (loaded on demand)
 let config           = {};
 let selectedServices = [];
 let selectedStaff    = [];   // multi-select staff
+let staffAmounts     = {};   // { staffName: amount } — per-staff amount boxes
 
 let historyDate          = todayKey();
 let historyCalendarMonth = new Date();
@@ -76,6 +77,14 @@ function escapeHtml(str) {
     if (str === undefined || str === null) return "";
     return String(str)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ---------------------------------------------------------
+   Membership helper
+   --------------------------------------------------------- */
+
+function isMembershipPayment(value) {
+    return (value || "").toLowerCase().includes("membership");
 }
 
 /* ---------------------------------------------------------
@@ -166,6 +175,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             closeMultiSelect("staff");
         }
     });
+
+    // Payment type — watch for Membership Card selection
+    document.getElementById("paymentType").addEventListener("change", handlePaymentTypeChange);
 
     // Admin modal
     document.getElementById("adminOpenBtn").addEventListener("click", openAdmin);
@@ -269,6 +281,9 @@ function populateDropdowns() {
     const allRefs   = [...config.references, ...staffRefs];
     fillSelect("reference", allRefs, "Select Reference", false);
     fillSelect("paymentType", config.payments, null, false);
+
+    // Re-evaluate membership state in case the selected payment type changed
+    handlePaymentTypeChange();
 }
 
 function fillSelect(id, options, placeholder, placeholderDisabled) {
@@ -378,8 +393,10 @@ function renderStaffOptions() {
                 if (!selectedStaff.includes(cb.value)) selectedStaff.push(cb.value);
             } else {
                 selectedStaff = selectedStaff.filter(s => s !== cb.value);
+                delete staffAmounts[cb.value];
             }
             updateTriggerText("staff");
+            renderStaffAmountBoxes();
         });
     });
 
@@ -406,6 +423,104 @@ function updateTriggerText(type) {
 }
 
 /* ---------------------------------------------------------
+   Per-staff amount boxes
+   One amount input is shown per selected staff member, below
+   the staff multi-select, purely so each staff member's service
+   amount can be logged (used for the per-staff Excel columns).
+   This total is informational only — it no longer fills in the
+   main Amount field, which is now always typed in manually.
+   --------------------------------------------------------- */
+
+function renderStaffAmountBoxes() {
+    const box  = document.getElementById("staffAmountBox");
+    const grid = document.getElementById("staffAmountGrid");
+    const membershipMode = isMembershipPayment(document.getElementById("paymentType").value);
+
+    // Drop amounts for staff no longer selected
+    Object.keys(staffAmounts).forEach(name => {
+        if (!selectedStaff.includes(name)) delete staffAmounts[name];
+    });
+
+    if (selectedStaff.length === 0) {
+        box.hidden = true;
+        return;
+    }
+
+    grid.innerHTML = selectedStaff.map(name => {
+        const id    = "stamt_" + name.replace(/[^a-z0-9]/gi, "_");
+        const value = staffAmounts[name] !== undefined ? staffAmounts[name] : "";
+        return `
+            <div class="staff-amount-item">
+                <label for="${id}">${escapeHtml(name)}</label>
+                <input type="number" id="${id}" min="0" placeholder="0" data-staff="${escapeHtml(name)}" value="${value}">
+            </div>`;
+    }).join("") + (membershipMode
+        ? `<div class="staff-amount-total">Service amount per staff — not charged (Membership Card)</div>`
+        : `<div class="staff-amount-total">Staff total (for reference only): <strong id="staffAmountTotalValue">${formatRupees(staffAmountsSum())}</strong></div>`);
+
+    grid.querySelectorAll("input[data-staff]").forEach(inp => {
+        inp.addEventListener("input", () => {
+            const name = inp.dataset.staff;
+            const val  = Number(inp.value) || 0;
+            staffAmounts[name] = val;
+            updateStaffAmountTotalDisplay();
+        });
+    });
+
+    box.hidden = false;
+}
+
+function staffAmountsSum() {
+    return Object.values(staffAmounts).reduce((sum, v) => sum + (Number(v) || 0), 0);
+}
+
+function updateStaffAmountTotalDisplay() {
+    const totalEl = document.getElementById("staffAmountTotalValue");
+    if (totalEl) totalEl.textContent = formatRupees(staffAmountsSum());
+}
+
+/* ---------------------------------------------------------
+   Membership Card payment handling
+   When "Membership Card" (or any payment type containing the
+   word "membership") is selected:
+     - the per-staff amount boxes and the Amount field are hidden
+     - no amount is required
+     - the customer is always saved as "Returning" (old customer)
+   --------------------------------------------------------- */
+
+function handlePaymentTypeChange() {
+    const payment   = document.getElementById("paymentType").value;
+    const membership = isMembershipPayment(payment);
+
+    const amountField   = document.getElementById("amount");
+    const membershipNote = document.getElementById("membershipNote");
+    const toggleGroup    = document.getElementById("customerTypeToggle");
+
+    if (membership) {
+        amountField.value    = 0;
+        amountField.required = false;
+        amountField.hidden   = true;
+
+        membershipNote.hidden = false;
+
+        const returningRadio = document.querySelector('input[name="customerType"][value="Returning"]');
+        if (returningRadio) returningRadio.checked = true;
+        toggleGroup.classList.add("is-locked");
+
+        // The customer isn't charged anything, but we still want to capture
+        // each staff member's service amount (for reporting), so the
+        // per-staff inputs stay visible even in membership mode.
+        renderStaffAmountBoxes();
+    } else {
+        amountField.required = true;
+        amountField.hidden   = false;
+        membershipNote.hidden = true;
+        toggleGroup.classList.remove("is-locked");
+        renderStaffAmountBoxes();
+    }
+}
+
+/* ---------------------------------------------------------
    Add customer
    --------------------------------------------------------- */
 
@@ -428,23 +543,35 @@ async function addCustomer(e) {
         return;
     }
 
+    const paymentValue = document.getElementById("paymentType").value;
+    const membership    = isMembershipPayment(paymentValue);
+
     const submitBtn = document.querySelector("#customerForm button[type=submit]");
     submitBtn.disabled = true; submitBtn.textContent = "Saving…";
 
     const now = new Date();
     const customer = {
-        customerType: getSelectedCustomerType(),
+        // Membership Card customers are always logged as Returning (old customers)
+        customerType: membership ? "Returning" : getSelectedCustomerType(),
         name:      document.getElementById("customerName").value.trim(),
         phone:     document.getElementById("customerPhone").value.trim(),
         service:   selectedServices.join(", "),
         reference: document.getElementById("reference").value,
-        payment:   document.getElementById("paymentType").value,
+        payment:   paymentValue,
         staff:     selectedStaff.join(", "),
-        amount:    Number(document.getElementById("amount").value),
+        amount:    membership ? 0 : Number(document.getElementById("amount").value),
         dateKey:   todayKey(),
         date:      now.toLocaleString(),
         time:      now.toLocaleTimeString()
     };
+
+    // Keep a record of each staff member's service amount (handy for reports).
+    // Captured for both regular payments and Membership Card visits — a
+    // membership visit still has a per-staff service value even though the
+    // customer isn't charged for it.
+    if (Object.keys(staffAmounts).length > 0) {
+        customer.staffAmounts = { ...staffAmounts };
+    }
 
     try {
         await addDoc(collection(db, "customers"), customer);
@@ -466,13 +593,16 @@ function resetForm() {
     renderServiceOptions();
     closeMultiSelect("service");
 
-    // Reset staff
+    // Reset staff + per-staff amounts
     selectedStaff = [];
+    staffAmounts  = {};
     renderStaffOptions();
     closeMultiSelect("staff");
+    document.getElementById("staffAmountBox").hidden = true;
 
     document.getElementById("reference").selectedIndex   = 0;
     document.getElementById("paymentType").selectedIndex = 0;
+    handlePaymentTypeChange();
 
     const typeNew = document.querySelector('input[name="customerType"][value="New"]');
     if (typeNew) typeNew.checked = true;
@@ -524,6 +654,58 @@ function buildRows(records, showActions = false) {
 }
 
 /* ---------------------------------------------------------
+   Per-staff service amount columns (used by Excel exports)
+   Each staff member who appears in a set of records gets their
+   own column showing the service amount logged for them on
+   that visit (from staffAmounts), so a sheet can show, e.g.,
+   "Raju - Service Amt (₹)", "Anita - Service Amt (₹)", etc.
+   side by side, instead of one combined Staff/Amount column.
+   --------------------------------------------------------- */
+
+function getStaffColumnNames(records) {
+    const names = new Set();
+    records.forEach(c => {
+        if (c.staffAmounts) {
+            Object.keys(c.staffAmounts).forEach(n => names.add(n));
+        } else if (c.staff) {
+            c.staff.split(",").map(s => s.trim()).filter(Boolean).forEach(n => names.add(n));
+        }
+    });
+    return Array.from(names).sort();
+}
+
+function buildExportRow(c, i, staffColumns) {
+    const row = {
+        "#":         i + 1,
+        "Type":      c.customerType || "New",
+        "Name":      c.name,
+        "Phone":     c.phone,
+        "Service":   c.service,
+        "Reference": c.reference,
+        "Payment":   c.payment,
+        "Staff":     c.staff,
+        "Amount":    c.amount,
+        "Date":      formatShortDate(c.dateKey),
+        "Time":      c.time
+    };
+
+    const staffList = (c.staff || "").split(",").map(s => s.trim()).filter(Boolean);
+
+    staffColumns.forEach(name => {
+        let val = "";
+        if (c.staffAmounts && c.staffAmounts[name] !== undefined) {
+            val = c.staffAmounts[name];
+        } else if (!c.staffAmounts && staffList.length === 1 && staffList[0] === name) {
+            // Legacy single-staff record with no per-staff split — fall back to the total
+            val = c.amount || 0;
+        }
+        row[`${name} - Service Amt (₹)`] = val;
+    });
+
+    return row;
+}
+
+/* ---------------------------------------------------------
    Today (real-time)
    --------------------------------------------------------- */
 
@@ -547,13 +729,13 @@ function openAdmin() {
     const overlay  = document.getElementById("adminOverlay");
     overlay.hidden = false;
     requestAnimationFrame(() => overlay.classList.add("is-open"));
-    const unlocked = sessionStorage.getItem("inari_admin_unlocked") === "1";
-    document.getElementById("adminLogin").hidden = unlocked;
-    document.getElementById("adminPanel").hidden = !unlocked;
+    // Always start at the password screen — admin access is never
+    // remembered between opens, even within the same browser session.
+    document.getElementById("adminLogin").hidden = false;
+    document.getElementById("adminPanel").hidden = true;
     document.getElementById("adminError").hidden = true;
     document.getElementById("adminPasswordInput").value = "";
-    if (unlocked) { switchAdminTab("history"); renderOptionEditors(); }
-    else document.getElementById("adminPasswordInput").focus();
+    document.getElementById("adminPasswordInput").focus();
 }
 
 function closeAdmin() {
@@ -569,7 +751,6 @@ async function attemptAdminLogin() {
     loginBtn.disabled = true; loginBtn.textContent = "Checking…";
     const correct = await getAdminPassword();
     if (input.value === correct) {
-        sessionStorage.setItem("inari_admin_unlocked", "1");
         document.getElementById("adminLogin").hidden = true;
         document.getElementById("adminPanel").hidden = false;
         switchAdminTab("history");
@@ -836,19 +1017,8 @@ async function renderExportPreview() {
 async function exportRangeExcel() {
     await loadAllCustomers();
     const records = getExportFiltered();
-    const rows = records.map((c, i) => ({
-        "#":           i + 1,
-        "Type":        c.customerType || "New",
-        "Name":        c.name,
-        "Phone":       c.phone,
-        "Service":     c.service,
-        "Reference":   c.reference,
-        "Payment":     c.payment,
-        "Staff":       c.staff,
-        "Amount":      c.amount,
-        "Date":        formatShortDate(c.dateKey),
-        "Time":        c.time
-    }));
+    const staffColumns = getStaffColumnNames(records);
+    const rows = records.map((c, i) => buildExportRow(c, i, staffColumns));
     const ws  = XLSX.utils.json_to_sheet(rows);
     const wb  = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers");
@@ -960,23 +1130,39 @@ async function exportMonthlyExcel() {
         });
 
         if (records.length > 0) {
-            const dayRows = records.map((c, i) => ({
-                "#":          i + 1,
-                "Type":       c.customerType || "New",
-                "Name":       c.name        || "",
-                "Phone":      c.phone       || "",
-                "Service":    c.service     || "",
-                "Reference":  c.reference   || "",
-                "Payment":    c.payment     || "",
-                "Staff":      c.staff       || "",
-                "Amount (₹)": c.amount      || 0,
-                "Time":       c.time        || ""
-            }));
+            const dayStaffColumns = getStaffColumnNames(records);
+            const dayRows = records.map((c, i) => {
+                const row = {
+                    "#":          i + 1,
+                    "Type":       c.customerType || "New",
+                    "Name":       c.name        || "",
+                    "Phone":      c.phone       || "",
+                    "Service":    c.service     || "",
+                    "Reference":  c.reference   || "",
+                    "Payment":    c.payment     || "",
+                    "Staff":      c.staff       || "",
+                    "Amount (₹)": c.amount      || 0,
+                    "Time":       c.time        || ""
+                };
+                const staffList = (c.staff || "").split(",").map(s => s.trim()).filter(Boolean);
+                dayStaffColumns.forEach(name => {
+                    let val = "";
+                    if (c.staffAmounts && c.staffAmounts[name] !== undefined) {
+                        val = c.staffAmounts[name];
+                    } else if (!c.staffAmounts && staffList.length === 1 && staffList[0] === name) {
+                        val = c.amount || 0;
+                    }
+                    row[`${name} - Service Amt (₹)`] = val;
+                });
+                return row;
+            });
             const ws = XLSX.utils.json_to_sheet(dayRows);
-            ws["!cols"] = [
+            const baseCols = [
                 {wch:4},{wch:10},{wch:18},{wch:14},{wch:22},
                 {wch:14},{wch:10},{wch:12},{wch:12},{wch:12}
             ];
+            const staffCols = dayStaffColumns.map(() => ({wch:18}));
+            ws["!cols"] = [...baseCols, ...staffCols];
             const label = `${String(d).padStart(2,"0")} ${new Date(year,month-1,d).toLocaleDateString("en-IN",{month:"short"})}`;
             XLSX.utils.book_append_sheet(wb, ws, label);
         }
@@ -1012,19 +1198,8 @@ window.exportExcel = async function(dateKey) {
     dateKey = dateKey || todayKey();
     await loadAllCustomers();
     const records = getRecordsFor(dateKey);
-    const rows = records.map((c, i) => ({
-        "#":         i + 1,
-        "Type":      c.customerType || "New",
-        "Name":      c.name,
-        "Phone":     c.phone,
-        "Service":   c.service,
-        "Reference": c.reference,
-        "Payment":   c.payment,
-        "Staff":     c.staff,
-        "Amount":    c.amount,
-        "Date":      formatShortDate(c.dateKey),
-        "Time":      c.time
-    }));
+    const staffColumns = getStaffColumnNames(records);
+    const rows = records.map((c, i) => buildExportRow(c, i, staffColumns));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Customers");
