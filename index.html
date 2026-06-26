@@ -20,6 +20,7 @@
             <span id="liveDay" class="live-day"></span>
             <span id="liveTime" class="live-time"></span>
         </div>
+        <button id="staffPortalBtn" class="btn-ghost" type="button">👥 Staff</button>
         <button id="adminOpenBtn" class="btn-ghost" type="button">Admin</button>
     </div>
 </header>
@@ -81,7 +82,7 @@
 
             <select id="paymentType" required></select>
 
-            <!-- Staff multi-select (replaces old <select id="staff">) -->
+            <!-- Staff multi-select -->
             <div class="multi-select" id="staffSelect">
                 <button type="button" class="multi-select-trigger" id="staffTrigger" aria-haspopup="listbox" aria-expanded="false">
                     <span id="staffTriggerText">Select Staff</span>
@@ -90,13 +91,13 @@
                 <div class="multi-select-panel" id="staffPanel" hidden></div>
             </div>
 
-            <!-- Per-staff amount boxes: one input per selected staff member -->
+            <!-- Per-staff amount boxes -->
             <div class="staff-amount-box" id="staffAmountBox" hidden>
                 <label class="field-label">Amount per Staff</label>
                 <div class="staff-amount-grid" id="staffAmountGrid"></div>
             </div>
 
-            <!-- Membership notice shown instead of amount input -->
+            <!-- Membership notice -->
             <p class="membership-note" id="membershipNote" hidden>
                 💳 Membership Card selected — final amount is <strong>₹0</strong>. You can still log each staff
                 member's service amount below for reporting. Customer will be saved as <strong>Returning</strong>.
@@ -129,7 +130,9 @@
 
 </main>
 
-<!-- Admin Modal -->
+<!-- ═══════════════════════════════════════════════════════
+     Admin Modal
+═══════════════════════════════════════════════════════ -->
 <div class="overlay" id="adminOverlay" hidden>
     <div class="modal modal-wide">
         <button class="icon-btn modal-close" id="closeAdminBtn" type="button">×</button>
@@ -169,6 +172,7 @@
                         <div><span class="stat-label">Customers</span><span class="stat-value" id="historyCustomers">0</span></div>
                     </div>
                     <div class="actions">
+                        <button class="btn-primary" id="historyAddCustomerBtn" type="button">+ Add Customer</button>
                         <button class="btn-secondary" id="historyExportExcelBtn" type="button">Export Excel</button>
                         <button class="btn-secondary" id="historyExportPdfBtn" type="button">Export PDF</button>
                     </div>
@@ -192,7 +196,6 @@
 
             <!-- ── Export Tab ── -->
             <div id="adminTabExport" hidden>
-
                 <div class="export-sub-section">
                     <h3 class="export-sub-title">Export Customers</h3>
                     <p class="muted">Filter by date range, customer type, or name / phone then export.</p>
@@ -257,7 +260,6 @@
                 <div class="export-sub-section export-monthly-section">
                     <h3 class="export-sub-title">Monthly Sales Report</h3>
                     <p class="muted">Export a full month's data as an Excel workbook — one sheet per day with a summary sheet.</p>
-
                     <div class="export-row monthly-row">
                         <div class="field-group">
                             <label class="field-label">Select Month</label>
@@ -269,7 +271,6 @@
                     </div>
                     <p class="success-text" id="monthlyExportMsg" hidden>Preparing export…</p>
                 </div>
-
             </div>
 
             <!-- ── Settings Tab ── -->
@@ -309,7 +310,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="admin-password-change">
                     <h4>Change Admin Password</h4>
                     <input type="password" id="newAdminPassword" placeholder="New password">
@@ -321,7 +321,84 @@
     </div>
 </div>
 
-<!-- Edit Customer Modal -->
+<!-- ═══════════════════════════════════════════════════════
+     Add Customer for Past Date Modal
+═══════════════════════════════════════════════════════ -->
+<div class="overlay" id="addPastOverlay" hidden>
+    <div class="modal modal-wide">
+        <button class="icon-btn modal-close" id="closeAddPastBtn" type="button">×</button>
+        <h2>Add Customer — <span id="addPastDateLabel">Select Date</span></h2>
+        <p class="muted" id="addPastDateMuted">Adding record for a past date.</p>
+
+        <form id="addPastForm">
+            <div class="field-group">
+                <label class="field-label">Customer Type</label>
+                <div class="toggle-group" id="pastCustomerTypeToggle">
+                    <label class="toggle-option">
+                        <input type="radio" name="pastCustomerType" value="New" checked>
+                        <span>🆕 New</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="radio" name="pastCustomerType" value="Returning">
+                        <span>🔄 Old</span>
+                    </label>
+                </div>
+            </div>
+
+            <input type="text" id="pastCustomerName" placeholder="Customer Name" autocomplete="off" required>
+            <input type="tel" id="pastCustomerPhone" placeholder="Phone Number" autocomplete="off" required>
+
+            <div class="multi-select" id="pastServiceSelect">
+                <button type="button" class="multi-select-trigger" id="pastServiceTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="pastServiceTriggerText">Select Services</span>
+                    <span class="chevron">▾</span>
+                </button>
+                <div class="multi-select-panel" id="pastServicePanel" hidden></div>
+            </div>
+
+            <select id="pastReference">
+                <option value="" selected>Select Reference</option>
+            </select>
+
+            <select id="pastPaymentType" required></select>
+
+            <div class="multi-select" id="pastStaffSelect">
+                <button type="button" class="multi-select-trigger" id="pastStaffTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="pastStaffTriggerText">Select Staff</span>
+                    <span class="chevron">▾</span>
+                </button>
+                <div class="multi-select-panel" id="pastStaffPanel" hidden></div>
+            </div>
+
+            <div class="staff-amount-box" id="pastStaffAmountBox" hidden>
+                <label class="field-label">Amount per Staff</label>
+                <div class="staff-amount-grid" id="pastStaffAmountGrid"></div>
+            </div>
+
+            <p class="membership-note" id="pastMembershipNote" hidden>
+                💳 Membership Card selected — final amount is <strong>₹0</strong>. Customer will be saved as <strong>Returning</strong>.
+            </p>
+
+            <input type="number" id="pastAmount" placeholder="Amount" min="0" required>
+
+            <div class="past-time-row">
+                <div class="field-group">
+                    <label class="field-label">Time (optional)</label>
+                    <input type="time" id="pastTime" placeholder="HH:MM">
+                </div>
+            </div>
+
+            <div class="edit-actions">
+                <button type="submit" class="btn-primary">Save Customer</button>
+                <button type="button" class="btn-secondary" id="cancelAddPastBtn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     Edit Customer Modal
+═══════════════════════════════════════════════════════ -->
 <div class="overlay" id="editOverlay" hidden>
     <div class="modal modal-sm">
         <button class="icon-btn modal-close" id="closeEditBtn" type="button">×</button>
@@ -353,6 +430,95 @@
                 <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     Staff Portal Modal
+═══════════════════════════════════════════════════════ -->
+<div class="overlay" id="staffOverlay" hidden>
+    <div class="modal modal-wide">
+        <button class="icon-btn modal-close" id="closeStaffBtn" type="button">×</button>
+        <div class="staff-portal-header">
+            <h2>Staff Performance</h2>
+            <p class="muted">Service amounts earned by each staff member across all records.</p>
+        </div>
+
+        <!-- Date filters -->
+        <div class="staff-filter-bar">
+            <div class="staff-filter-group">
+                <label class="field-label">View Mode</label>
+                <div class="toggle-group">
+                    <label class="toggle-option">
+                        <input type="radio" name="staffViewMode" value="day" checked>
+                        <span>By Day</span>
+                    </label>
+                    <label class="toggle-option">
+                        <input type="radio" name="staffViewMode" value="range">
+                        <span>Date Range</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Single day picker -->
+            <div id="staffDayPicker" class="staff-filter-group">
+                <label class="field-label">Select Day</label>
+                <input type="date" id="staffDayDate">
+            </div>
+
+            <!-- Range picker -->
+            <div id="staffRangePicker" class="staff-filter-group staff-range-group" style="display:none">
+                <div>
+                    <label class="field-label">From</label>
+                    <input type="date" id="staffFromDate">
+                </div>
+                <div>
+                    <label class="field-label">To</label>
+                    <input type="date" id="staffToDate">
+                </div>
+            </div>
+
+            <div class="staff-filter-actions">
+                <button class="btn-primary" id="staffLoadBtn" type="button">Load Data</button>
+            </div>
+        </div>
+
+        <!-- Export buttons -->
+        <div class="staff-export-bar" id="staffExportBar" hidden>
+            <span class="staff-period-label" id="staffPeriodLabel"></span>
+            <div class="staff-export-actions">
+                <button class="btn-secondary" id="staffExportExcelBtn" type="button">Export Excel</button>
+                <button class="btn-secondary" id="staffExportPdfBtn" type="button">Export PDF</button>
+            </div>
+        </div>
+
+        <!-- Charts area -->
+        <div id="staffChartsArea" hidden>
+            <div class="staff-summary-cards" id="staffSummaryCards"></div>
+
+            <div class="staff-chart-section">
+                <h4 class="staff-chart-title">Service Amount by Staff</h4>
+                <div class="staff-bar-chart" id="staffBarChart"></div>
+            </div>
+
+            <div class="staff-chart-section" id="staffTrendSection" hidden>
+                <h4 class="staff-chart-title">Daily Trend (per staff)</h4>
+                <div class="staff-trend-chart" id="staffTrendChart"></div>
+            </div>
+
+            <!-- Detail table -->
+            <div class="staff-chart-section">
+                <h4 class="staff-chart-title">Breakdown</h4>
+                <div class="table-scroll">
+                    <table id="staffBreakdownTable">
+                        <thead><tr id="staffBreakdownHead"></tr></thead>
+                        <tbody id="staffBreakdownBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <p class="empty-state" id="staffEmptyState" hidden>No staff service data found for this period.</p>
     </div>
 </div>
 
