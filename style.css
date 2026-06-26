@@ -83,7 +83,7 @@ main > section:last-of-type{
   gap:12px;
 }
 
-.header-right{ display:flex; align-items:center; gap:20px; }
+.header-right{ display:flex; align-items:center; gap:12px; }
 
 .datetime-box{
   display:flex;
@@ -215,7 +215,8 @@ form#customerForm{
   gap:18px; align-items:start;
 }
 
-form#editForm{
+form#editForm,
+form#addPastForm{
   display:flex; flex-direction:column; gap:14px;
 }
 
@@ -229,7 +230,9 @@ input::placeholder{ color:#A89F93; }
 input:hover, select:hover{ border-color:#CFC6B8; }
 input:focus, select:focus{ border-color:var(--color-accent); background:#fff; }
 
-input[type="date"]{ cursor:pointer; }
+input[type="date"],
+input[type="time"],
+input[type="month"]{ cursor:pointer; }
 
 input[readonly]{
   background:var(--color-surface-alt);
@@ -300,7 +303,7 @@ form#customerForm button[type="submit"]{ grid-column:1 / -1; justify-self:end; m
   padding:2px 8px; border-radius:20px; white-space:nowrap;
 }
 
-/* ---------- Multi-select (Services) ---------- */
+/* ---------- Multi-select ---------- */
 .multi-select{ position:relative; }
 
 .multi-select-trigger{
@@ -314,8 +317,15 @@ form#customerForm button[type="submit"]{ grid-column:1 / -1; justify-self:end; m
 .multi-select-trigger:hover{ border-color:#CFC6B8; }
 .multi-select-trigger.is-open{ border-color:var(--color-accent); background:#fff; }
 
-#serviceTriggerText{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#serviceTriggerText.is-placeholder{ color:#A89F93; }
+#serviceTriggerText,
+#staffTriggerText,
+#pastServiceTriggerText,
+#pastStaffTriggerText{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+#serviceTriggerText.is-placeholder,
+#staffTriggerText.is-placeholder,
+#pastServiceTriggerText.is-placeholder,
+#pastStaffTriggerText.is-placeholder{ color:#A89F93; }
 
 .multi-select-trigger .chevron{
   color:var(--color-text-muted); font-size:12px;
@@ -388,6 +398,11 @@ form#customerForm button[type="submit"]{ grid-column:1 / -1; justify-self:end; m
   font-size:14px; color:var(--color-text);
 }
 
+/* ---------- Add Past Customer form extras ---------- */
+.past-time-row{
+  max-width:240px;
+}
+
 /* ---------- Actions ---------- */
 .actions{ display:flex; gap:10px; flex-wrap:wrap; }
 
@@ -439,9 +454,6 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
 .row-action-btn.delete:hover{ background:var(--color-danger-soft); color:var(--color-danger); }
 
 /* ---------- Export Panel ---------- */
-.export-panel{ margin-top:0; }
-.export-panel h2{ font-size:21px; margin-bottom:20px; }
-
 .export-controls{
   display:flex; flex-direction:column; gap:16px; margin-bottom:20px;
 }
@@ -453,7 +465,7 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
 .export-row .field-group{ min-width:160px; }
 
 .export-actions{
-  display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; padding-bottom:0;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
 }
 
 .export-count{
@@ -534,10 +546,10 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
   transition:transform 160ms var(--ease);
 }
 .modal.modal-sm{ max-width:480px; }
-.modal.modal-wide{ max-width:880px; }
+.modal.modal-wide{ max-width:900px; }
 .overlay.is-open .modal{ transform:scale(1) translateY(0); }
 
-/* ---------- Export sub-sections (inside admin Export tab) ---------- */
+/* ---------- Export sub-sections ---------- */
 .export-sub-section{
   padding:20px 0 24px;
   border-bottom:1px solid var(--color-border);
@@ -618,7 +630,8 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
 
 .history-table-container{ box-shadow:none; }
 .history-table-container table{ min-width:0; }
-.history-table-container th, .history-table-container td{ font-size:12.5px; padding:10px 12px; }
+.history-table-container th,
+.history-table-container td{ font-size:12.5px; padding:10px 12px; }
 
 .admin-grid{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
@@ -664,7 +677,161 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
 .edit-actions{ display:flex; gap:10px; margin-top:4px; }
 .edit-actions button{ flex:1; }
 
-/* ---------- Responsive ---------- */
+/* ════════════════════════════════════════════════════════
+   STAFF PORTAL
+════════════════════════════════════════════════════════ */
+
+.staff-portal-header{ margin-bottom:20px; }
+.staff-portal-header h2{ margin-bottom:4px; }
+
+/* Filter bar */
+.staff-filter-bar{
+  display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;
+  padding:18px; background:var(--color-surface-alt);
+  border:1px solid var(--color-border); border-radius:var(--radius-md);
+  margin-bottom:16px;
+}
+
+.staff-filter-group{
+  display:flex; flex-direction:column; gap:8px; min-width:160px;
+}
+
+.staff-range-group{
+  display:flex; gap:12px; flex-wrap:wrap; min-width:280px;
+}
+.staff-range-group > div{ display:flex; flex-direction:column; gap:8px; }
+
+.staff-filter-actions{ display:flex; align-items:flex-end; }
+
+/* Export bar */
+.staff-export-bar{
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px;
+  padding:12px 16px;
+  background:var(--color-success-soft);
+  border:1px solid var(--color-success);
+  border-radius:var(--radius-md);
+  margin-bottom:20px;
+}
+
+.staff-period-label{
+  font-size:13px; font-weight:600; color:var(--color-success);
+}
+
+.staff-export-actions{ display:flex; gap:10px; }
+
+/* Summary cards */
+.staff-summary-cards{
+  display:flex; gap:14px; flex-wrap:wrap; margin-bottom:24px;
+}
+
+.staff-summary-card{
+  background:var(--color-surface);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-md);
+  padding:16px 20px;
+  flex:1; min-width:130px;
+  box-shadow:var(--shadow-sm);
+}
+
+.staff-summary-total{
+  background:var(--color-accent);
+  border-color:var(--color-accent);
+}
+.staff-summary-total .staff-card-name,
+.staff-summary-total .staff-card-amount,
+.staff-summary-total .staff-card-pct{ color:#fff !important; }
+
+.staff-card-name{
+  font-size:12px; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.08em; color:var(--color-text-muted); margin-bottom:6px;
+}
+
+.staff-card-amount{
+  font-family:var(--font-display);
+  font-size:22px; font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--color-text); margin-bottom:4px;
+}
+
+.staff-card-pct{
+  font-size:12px; color:var(--color-text-muted); font-weight:500;
+}
+
+/* Chart sections */
+.staff-chart-section{
+  margin-bottom:28px;
+}
+
+.staff-chart-title{
+  font-size:13px; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.08em; color:var(--color-text-muted);
+  margin-bottom:14px;
+}
+
+/* Bar chart */
+.staff-bar-chart{
+  display:flex; flex-direction:column; gap:10px;
+}
+
+.staff-bar-row{
+  display:flex; align-items:center; gap:14px;
+}
+
+.staff-bar-label{
+  font-size:13.5px; font-weight:600; color:var(--color-text);
+  width:80px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.staff-bar-track{
+  flex:1; height:28px; background:var(--color-surface-alt);
+  border-radius:6px; overflow:hidden;
+  border:1px solid var(--color-border);
+}
+
+.staff-bar-fill{
+  height:100%; border-radius:6px;
+  transition:width 500ms cubic-bezier(.4,0,.2,1);
+  min-width:4px;
+}
+
+.staff-bar-value{
+  font-size:13.5px; font-weight:700;
+  font-variant-numeric:tabular-nums;
+  color:var(--color-text);
+  width:90px; text-align:right; flex-shrink:0;
+}
+
+/* Trend chart */
+.staff-trend-chart{ width:100%; }
+
+/* Legend */
+.staff-chart-legend{
+  display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;
+}
+
+.legend-item{
+  display:flex; align-items:center; gap:6px;
+  font-size:13px; font-weight:600; color:var(--color-text);
+}
+
+.legend-dot{
+  width:10px; height:10px; border-radius:50%; flex-shrink:0;
+}
+
+/* Breakdown table */
+#staffBreakdownTable{ min-width:500px; }
+#staffBreakdownTable thead th{ font-size:11.5px; }
+#staffBreakdownTable td{ font-size:13px; }
+
+.breakdown-total-row td{
+  background:var(--color-surface-alt);
+  border-top:2px solid var(--color-border);
+}
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════ */
 @media (max-width:720px){
   body{ padding:18px 14px 18px; }
   .app-header{ margin-bottom:18px; }
@@ -677,4 +844,9 @@ td.num-cell{ color:var(--color-text-muted); font-size:12px; font-weight:600; wid
   .admin-tab-btn + .admin-tab-btn{ margin-left:8px; }
   .export-row{ flex-direction:column; }
   .export-actions{ width:100%; }
+  .staff-filter-bar{ flex-direction:column; }
+  .staff-bar-label{ width:60px; }
+  .staff-summary-cards{ gap:10px; }
+  .staff-summary-card{ min-width:100px; padding:12px 14px; }
+  .header-right{ gap:8px; }
 }
